@@ -42,7 +42,7 @@ A phone-first web app for a paint-your-own pottery studio. The goal is to replac
 ## Tech decisions (already made)
 
 - Backend: Supabase (Postgres plus auth)
-- Hosting: Cloudflare Pages
+- Hosting: Cloudflare Workers (static assets only, configured in `app/wrangler.jsonc`), deployed from GitHub on every push to `main`. Not Cloudflare Pages.
 - An installable phone web app (PWA), not a native app
 - Push notifications for stock alerts. On iPhone, web push only works after the app is added to the Home Screen (iOS 16.4+), so onboarding has to walk them through "Add to Home Screen."
 - Front end: Vite plus plain JavaScript (no React). Screens are plain functions in `app/src/views/` that set `innerHTML`. Routing uses `#/name` URLs so hosting needs no setup.
@@ -78,6 +78,6 @@ A phone-first web app for a paint-your-own pottery studio. The goal is to replac
 ## Next steps
 
 1. Pitch the demo to Jessie and Risa and collect their real data and pain points.
-2. Create the Supabase project and Cloudflare Pages site by following `app/README.md` (needs my accounts).
+2. Create the Supabase project and Cloudflare site by following `app/README.md` (needs my accounts).
 3. Build the rest of phase 1: check-in, status changes, kiln load/unload, then texts and stock alerts.
 4. Swap the sample seed data for their real piece list.

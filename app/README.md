@@ -58,17 +58,20 @@ npm run dev
 
 Open the address it prints (http://localhost:5173), enter your email, then click the link in the email you get. You should see the sample inventory.
 
-### 4. Put it online (Cloudflare Pages)
+### 4. Put it online (Cloudflare Workers)
 
-1. In Cloudflare: **Workers & Pages → Create → Pages → Connect to Git**, and pick the `kilnbook` repo.
+The site is hosted as a Cloudflare **Worker** named `kilnbook` that only serves files. `wrangler.jsonc` tells Cloudflare which folder to serve.
+
+1. In Cloudflare: **Workers & Pages → kilnbook → Settings → Builds → Connect**, and pick the `kilnbook` GitHub repo.
 2. Build settings:
-   - Framework preset: **None**
+   - Production branch: `main`
    - Root directory: `app`
    - Build command: `npm run build`
-   - Build output directory: `dist`
-3. Under **Environment variables**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` with the same values as `.env.local`.
-4. Deploy. Every push to `main` redeploys automatically.
-5. In Supabase, **Authentication → URL Configuration**, set **Site URL** to your new `*.pages.dev` address and add it under **Redirect URLs**.
+   - Deploy command: `npx wrangler deploy`
+3. Under **Build variables and secrets**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` with the same values as `.env.local`. They have to be *build* variables, not the Worker's runtime variables, because Vite bakes them into the files while it builds.
+4. **Settings → Domains & Routes**: turn on the `workers.dev` address.
+5. Every push to `main` now redeploys automatically.
+6. In Supabase, **Authentication → URL Configuration**, set **Site URL** to the `kilnbook.<your-subdomain>.workers.dev` address and add it under **Redirect URLs**.
 
 ### 5. Add someone else (Jessie, Risa)
 

@@ -10,7 +10,8 @@
     "icons": "node scripts/make-icons.mjs"
   },
   "devDependencies": {
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "wrangler": "^4.160.1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0"
