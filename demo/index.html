@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Kilnbook Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: a phone-sized app. On wide screens it sits in a device frame beside a short pitch column; on phones it fills the screen. */
+:root{
+  --bg:#E8ECF1; --surface:#FFFFFF; --surface-2:#F3F5F8; --ink:#16202C; --muted:#5A6777; --line:#DAE0E8;
+  --cobalt:#2347A6; --cobalt-soft:#E1E8F9; --on-accent:#FFFFFF;
+  --kiln:#AE540A; --kiln-soft:#FBE7D4; --ready:#1B7547; --ready-soft:#DAF0E3;
+  --alert:#AE1F38; --alert-soft:#FAE0E4; --slate:#526276; --slate-soft:#E5EAF1;
+  --frame:#121820; --scrim:rgba(10,15,22,.45);
+  --f-display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0C1117; --surface:#151C25; --surface-2:#10161D; --ink:#E7ECF2; --muted:#97A4B4; --line:#273240;
+  --cobalt:#86A3F2; --cobalt-soft:#1D2A49; --on-accent:#0C1117;
+  --kiln:#F1A863; --kiln-soft:#3A2614; --ready:#62D29C; --ready-soft:#14342A;
+  --alert:#F28A9A; --alert-soft:#3C1920; --slate:#A9B6C6; --slate-soft:#222C38;
+  --frame:#000000; --scrim:rgba(0,0,0,.6); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0C1117; --surface:#151C25; --surface-2:#10161D; --ink:#E7ECF2; --muted:#97A4B4; --line:#273240;
+  --cobalt:#86A3F2; --cobalt-soft:#1D2A49; --on-accent:#0C1117;
+  --kiln:#F1A863; --kiln-soft:#3A2614; --ready:#62D29C; --ready-soft:#14342A;
+  --alert:#F28A9A; --alert-soft:#3C1920; --slate:#A9B6C6; --slate-soft:#222C38;
+  --frame:#000000; --scrim:rgba(0,0,0,.6); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg); color:var(--ink); font:400 15px/1.45 var(--f-body); -webkit-font-smoothing:antialiased}
+button{font:inherit; color:inherit; cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cobalt); outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0; line-height:1.15}
+p{margin:0}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- stage ---------- */
+.stage{min-height:100%; display:grid; grid-template-columns:minmax(0,400px) auto; gap:64px; justify-content:center; align-items:center;
+  padding-block:32px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
+.pitch{display:flex; flex-direction:column; gap:22px; max-width:400px}
+.pitch .mark{display:flex; align-items:center; gap:10px; font:700 15px var(--f-display); color:var(--cobalt)}
+.pitch h1{font-size:44px; letter-spacing:-.02em}
+.pitch .lead{font-size:17px; color:var(--muted); max-width:36ch}
+.pitch h3{font-size:13px; font-family:var(--f-body); font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:10px}
+.pitch ol{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px}
+.phases{display:flex; flex-direction:column; gap:10px}
+.phase{display:grid; grid-template-columns:72px 1fr; gap:12px; align-items:baseline}
+.phase b{font:600 12px var(--f-body); letter-spacing:.05em; text-transform:uppercase; color:var(--cobalt)}
+.phase.later b{color:var(--muted)}
+.pitch .by{font-size:13px; color:var(--muted); border-top:1px solid var(--line); padding-top:14px}
+.logo{width:28px; height:28px; border-radius:8px; background:var(--cobalt); color:var(--on-accent); display:grid; place-items:center; font:700 15px var(--f-display); flex:none}
+
+.device{width:390px; height:min(812px, calc(100vh - 64px)); min-height:620px; border:10px solid var(--frame); border-radius:46px; overflow:hidden;
+  box-shadow:0 2px 6px rgba(15,25,40,.12),0 30px 60px rgba(15,25,40,.18); background:var(--surface-2)}
+@media (max-width:820px){
+  body{overflow:hidden}
+  .stage{display:block; height:100%; padding:0}
+  .pitch{display:none}
+  .device{width:100%; height:100%; min-height:0; border:0; border-radius:0; box-shadow:none}
+}
+
+/* ---------- app shell ---------- */
+.app{position:relative; height:100%; display:flex; flex-direction:column; background:var(--surface-2); overflow:hidden}
+.appbar{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 12px; background:var(--surface); border-bottom:1px solid var(--line)}
+.ab-left{display:flex; align-items:center; gap:10px; min-width:0}
+.ab-shop{font:600 15px var(--f-display); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ab-date{font-size:12px; color:var(--muted)}
+.screen{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:18px 16px 28px; display:flex; flex-direction:column; gap:16px}
+.screen h1{font-size:28px; letter-spacing:-.015em}
+.tabs{display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface); border-top:1px solid var(--line); padding:6px 6px 8px}
+.tab{display:flex; flex-direction:column; align-items:center; gap:2px; font-size:11px; font-weight:500; color:var(--muted); background:none; border:0; padding:6px 0; border-radius:10px; position:relative}
+.tab svg{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round}
+.tab[aria-current="page"]{color:var(--cobalt)}
+.badge{position:absolute; top:2px; left:calc(50% + 6px); min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--alert); color:var(--surface); font-size:11px; font-weight:600; display:grid; place-items:center}
+
+/* ---------- pieces ---------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:14px}
+.section-title{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.section-title h2{font-size:18px}
+.eyebrow{font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.btn{font:600 15px var(--f-body); border-radius:12px; padding:11px 16px; border:0; background:var(--cobalt); color:var(--on-accent); display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap}
+.btn.big{width:100%; padding:15px; font-size:16px; border-radius:14px}
+.btn.ghost{background:var(--cobalt-soft); color:var(--cobalt)}
+.btn.line{background:transparent; border:1px solid var(--line); color:var(--ink)}
+.btn.sm{padding:8px 12px; font-size:13px; border-radius:10px}
+.btn:active{transform:scale(.98)}
+.pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap}
+.pill::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
+.pill.painted{background:var(--slate-soft); color:var(--slate)}
+.pill.kiln{background:var(--kiln-soft); color:var(--kiln)}
+.pill.ready{background:var(--ready-soft); color:var(--ready)}
+.pill.picked{background:var(--surface-2); color:var(--muted)}
+.pill.alert{background:var(--alert-soft); color:var(--alert)}
+
+.intro{background:var(--cobalt-soft); border:0; display:flex; flex-direction:column; gap:8px}
+.intro h2{font-size:17px; color:var(--cobalt)}
+.intro ol{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:3px; font-size:14px}
+.intro .x{align-self:flex-start; background:none; border:0; padding:4px 0; color:var(--cobalt); font-weight:600; font-size:13px}
+
+.stats{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.stat{text-align:left; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:6px}
+.stat .n{font:700 32px/1 var(--f-display); font-variant-numeric:tabular-nums}
+.stat .s{font-size:12px; color:var(--muted)}
+.stat .s.warn{color:var(--alert); font-weight:600}
+
+.list{padding:0}
+.row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .r-main{min-width:0}
+.row .r-title{font-weight:600}
+.row .r-sub{font-size:13px; color:var(--muted)}
+.today{display:grid; grid-template-columns:repeat(3,1fr); text-align:left}
+.today div{padding:12px 14px; border-left:1px solid var(--line)}
+.today div:first-child{border-left:0}
+.today b{display:block; font:700 22px var(--f-display); font-variant-numeric:tabular-nums}
+.today span{font-size:12px; color:var(--muted)}
+
+/* pickups */
+.search{width:100%; font:inherit; font-size:16px; padding:11px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface); color:var(--ink)}
+.chips{display:flex; gap:8px; overflow-x:auto; margin:0 -16px; padding:0 16px 2px; scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:7px 12px; font-size:13px; font-weight:500}
+.chip .c{color:var(--muted); margin-left:4px; font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.chip[aria-pressed="true"] .c{color:inherit; opacity:.7}
+.bulk{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px 10px 14px; border-radius:14px; background:var(--kiln-soft); color:var(--kiln); font-size:13px; font-weight:600}
+.bulk.go{background:var(--ready-soft); color:var(--ready)}
+.bulk .btn{background:var(--kiln); color:var(--surface)}
+.bulk.go .btn{background:var(--ready)}
+.screen > *{flex-shrink:0}
+.tickets{display:flex; flex-direction:column; gap:10px}
+.ticket{display:grid; grid-template-columns:52px minmax(0,1fr); gap:4px 12px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:12px}
+.ticket.unclaimed{border-color:var(--alert)}
+.shelf{grid-row:span 2; width:52px; height:52px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; font:700 18px/1 var(--f-display)}
+.shelf span{font:600 9px var(--f-body); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:3px}
+.t-name{font-weight:600}
+.t-sub{font-size:13px; color:var(--muted)}
+.t-meta{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; font-size:12px}
+.t-act{grid-column:2; display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.empty{text-align:center; padding:28px 16px; color:var(--muted); font-size:14px}
+
+/* inventory */
+.inv{display:flex; align-items:center; gap:12px; padding:12px 14px; border-top:1px solid var(--line)}
+.inv:first-child{border-top:0}
+.inv .r-main{flex:1; min-width:0}
+.inv .r-title{font-weight:600; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.inv .r-sub{font-size:12px; color:var(--muted)}
+.stepper{display:flex; align-items:center; border:1px solid var(--line); border-radius:12px; overflow:hidden; flex:none}
+.stepper button{width:34px; height:36px; border:0; background:var(--surface-2); font-size:18px; line-height:1}
+.stepper .q{min-width:40px; text-align:center; font:700 17px var(--f-display); font-variant-numeric:tabular-nums}
+.inv.low .stepper .q{color:var(--alert)}
+
+/* more */
+.phase-tag{font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:6px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line)}
+.phase-tag.now{background:var(--cobalt-soft); color:var(--cobalt); border-color:transparent}
+.checks{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; font-size:14px}
+.checks li{display:flex; gap:10px; align-items:flex-start}
+.checks li::before{content:""; flex:none; width:16px; height:16px; margin-top:2px; border-radius:50%; background:var(--ready-soft); border:5px solid var(--ready-soft); box-shadow:inset 0 0 0 10px var(--ready)}
+.preview{display:flex; flex-direction:column; gap:12px}
+.preview .ph{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.preview h3{font-size:16px}
+.booking{display:grid; grid-template-columns:54px 1fr auto; gap:10px; align-items:center; font-size:13px; padding-top:10px; border-top:1px solid var(--line)}
+.booking .when{font-weight:600; line-height:1.2}
+.booking .when small{display:block; color:var(--muted); font-weight:500}
+.meter{height:10px; border-radius:5px; background:var(--surface-2); overflow:hidden; display:flex; border:1px solid var(--line)}
+.meter i{display:block; height:100%}
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:var(--muted)}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend span::before{content:""; width:10px; height:10px; border-radius:3px; background:var(--c)}
+.margins{display:flex; flex-direction:column; gap:6px; font-size:13px}
+.margins div{display:grid; grid-template-columns:minmax(0,1fr) 70px 44px; gap:8px; align-items:center}
+.margins .bar{height:6px; border-radius:3px; background:var(--cobalt)}
+.margins .v{text-align:right; font-variant-numeric:tabular-nums; font-weight:600}
+.sample{font-size:11px; color:var(--muted); font-style:italic}
+.field{display:flex; flex-direction:column; gap:6px}
+.field label{font-size:13px; font-weight:600}
+.field input{font:inherit; font-size:16px; padding:11px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); width:100%}
+
+/* sheet */
+.sheet{position:absolute; inset:0; background:var(--scrim); display:flex; align-items:flex-end; z-index:20; animation:fade .18s ease}
+.panel{background:var(--surface); width:100%; max-height:92%; overflow-y:auto; border-radius:22px 22px 0 0; padding:10px 16px 20px; display:flex; flex-direction:column; gap:14px; animation:rise .24s cubic-bezier(.2,.8,.2,1)}
+.grab{width:40px; height:5px; border-radius:3px; background:var(--line); align-self:center}
+.panel-head{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.panel-head h2{font-size:21px}
+.close{border:0; background:var(--surface-2); width:32px; height:32px; border-radius:50%; font-size:18px; line-height:1; color:var(--muted)}
+.picker{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.pick-wrap{position:relative}
+.pick{width:100%; text-align:left; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--surface); display:flex; flex-direction:column; gap:2px; min-height:62px}
+.pick .p-name{font-weight:600; font-size:14px; line-height:1.25; padding-right:22px}
+.pick .p-meta{font-size:12px; color:var(--muted)}
+.pick.on{border-color:var(--cobalt); background:var(--cobalt-soft)}
+.pick:disabled{opacity:.45; cursor:not-allowed}
+.p-q{position:absolute; top:8px; right:8px; min-width:22px; height:22px; border-radius:11px; padding:0 6px; background:var(--cobalt); color:var(--on-accent); font-size:12px; font-weight:600; display:grid; place-items:center; pointer-events:none}
+.p-minus{position:absolute; bottom:8px; right:8px; width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background:var(--surface); font-size:15px; line-height:1; display:grid; place-items:center}
+.foot{position:sticky; bottom:-20px; background:var(--surface); margin:0 -16px -20px; padding:12px 16px 20px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px}
+.foot .tot{font:700 22px var(--f-display); font-variant-numeric:tabular-nums}
+.err{color:var(--alert); font-size:13px; font-weight:600}
+.texts{display:flex; flex-direction:column; gap:14px}
+.sms-to{font-size:12px; color:var(--muted); margin-bottom:5px}
+.sms{background:var(--surface-2); border:1px solid var(--line); border-radius:18px 18px 18px 5px; padding:10px 14px; font-size:14px; max-width:92%}
+.fine{font-size:12px; color:var(--muted); text-align:center}
+.supplier{display:flex; flex-direction:column; gap:6px}
+.supplier h3{font-size:15px}
+.supplier .line{display:flex; justify-content:space-between; gap:10px; font-size:14px; padding:8px 0; border-top:1px solid var(--line)}
+
+/* notifications */
+.notif{position:absolute; top:10px; left:10px; right:10px; z-index:30; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:11px 12px;
+  display:flex; gap:10px; align-items:flex-start; box-shadow:0 10px 30px rgba(10,20,35,.22); text-align:left; animation:drop .3s cubic-bezier(.2,.8,.2,1)}
+.notif .n-top{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+.notif b{display:block; font-size:14px}
+.notif p{font-size:13px; color:var(--muted)}
+.toast{position:absolute; left:50%; bottom:80px; transform:translateX(-50%); background:var(--ink); color:var(--surface); padding:10px 16px; border-radius:12px; font-size:14px; font-weight:500; z-index:25; width:max-content; max-width:calc(100% - 32px); text-align:center; animation:fade .2s ease}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{transform:translateY(40px); opacity:.4}}
+@keyframes drop{from{transform:translateY(-30px); opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="pitch">
+    <div class="mark"><span class="logo">K</span>Kilnbook</div>
+    <h1>Every piece, from the shelf to pickup.</h1>
+    <p class="lead">A simple phone app for a paint-your-own pottery studio. It tracks bisque inventory and every customer's piece until they take it home.</p>
+    <div>
+      <h3>Try this</h3>
+      <ol>
+        <li>Tap <b>New painter</b>, add a Dino figurine, and save. Watch for the low-stock alert.</li>
+        <li>Open <b>Pickups</b> and load the waiting pieces into the kiln.</li>
+        <li>Unload the kiln. Each customer gets a "ready for pickup" text.</li>
+        <li>Back on <b>Home</b>, nudge the two people who forgot their pieces last month.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>The plan</h3>
+      <div class="phases">
+        <div class="phase"><b>Phase 1</b><span>Bisque inventory and piece pickups. This demo.</span></div>
+        <div class="phase later"><b>Phase 2</b><span>Party room bookings and summer camp sign-ups.</span></div>
+        <div class="phase later"><b>Phase 3</b><span>Money dashboard: what's actually paying the bills.</span></div>
+      </div>
+    </div>
+    <p class="by">Prototype by Josh Garofalo. Everything here is sample data, and no texts are actually sent.</p>
+  </aside>
+
+  <div class="device">
+    <div class="app" id="app">
+      <header class="appbar">
+        <div class="ab-left"><span class="logo">K</span><div style="min-width:0"><div class="ab-shop" id="ab-shop"></div><div class="ab-date" id="ab-date"></div></div></div>
+        <button class="btn sm" data-act="new">+ New painter</button>
+      </header>
+      <main class="screen" id="screen"></main>
+      <nav class="tabs" id="tabs">
+        <button class="tab" data-act="tab" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+        <button class="tab" data-act="tab" data-tab="pickups"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1.2 12.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>Pickups<span class="badge" id="b-pick" hidden></span></button>
+        <button class="tab" data-act="tab" data-tab="inventory"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 12h18M9 4v8M15 12v8"/></svg>Inventory<span class="badge" id="b-inv" hidden></span></button>
+        <button class="tab" data-act="tab" data-tab="more"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>Coming next</button>
+      </nav>
+      <div id="sheet"></div>
+      <div id="notif"></div>
+      <div id="toast"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAY = 864e5;
+const ago = n => Date.now() - n * DAY;
+const SHELVES = 'ABCD'.split('').flatMap(r => [1,2,3,4,5,6].map(n => r + n));
+
+function seed(){
+  return {
+    items: [
+      {id:'mug', name:'Classic mug', one:'mug', pl:'mugs', cost:4.25, price:26, qty:34, low:12, sup:'Mayco'},
+      {id:'plate', name:'Dinner plate, 11"', one:'dinner plate', pl:'dinner plates', cost:5.10, price:32, qty:18, low:8, sup:'Duncan'},
+      {id:'bowl', name:'Cereal bowl', one:'cereal bowl', pl:'cereal bowls', cost:3.20, price:22, qty:27, low:10, sup:'Duncan'},
+      {id:'unicorn', name:'Unicorn bank', one:'unicorn bank', pl:'unicorn banks', cost:6.80, price:34, qty:5, low:6, sup:'Mayco'},
+      {id:'dino', name:'Dino figurine', one:'dino', pl:'dinos', cost:3.90, price:24, qty:9, low:8, sup:'Mayco'},
+      {id:'petbowl', name:'Pet bowl', one:'pet bowl', pl:'pet bowls', cost:4.60, price:28, qty:7, low:6, sup:'Duncan'},
+      {id:'ornament', name:'Flat ornament', one:'ornament', pl:'ornaments', cost:1.10, price:12, qty:62, low:20, sup:'Duncan'},
+      {id:'tile', name:'Coaster tile', one:'coaster tile', pl:'coaster tiles', cost:0.90, price:10, qty:40, low:15, sup:'Mayco'},
+      {id:'mini', name:'Mini plate', one:'mini plate', pl:'mini plates', cost:2.40, price:16, qty:22, low:24, sup:'Duncan'}
+    ],
+    tickets: [
+      {id:1, name:'Megan Ortiz', phone:'(540) 555-0142', lines:[['mug',1]], shelf:'A2', status:'ready', painted:ago(6), ready:ago(2)},
+      {id:2, name:'Tom Becker', phone:'(540) 555-0118', lines:[['petbowl',1]], shelf:'B5', status:'ready', painted:ago(40), ready:ago(34)},
+      {id:3, name:'Dana Wills', phone:'(540) 555-0173', lines:[['mug',2]], shelf:'C1', status:'ready', painted:ago(47), ready:ago(41)},
+      {id:4, name:'Amy Carter', phone:'(540) 555-0126', lines:[['mini',8]], note:'Birthday party', shelf:'D1', status:'kiln', painted:ago(1), kiln:ago(0)},
+      {id:5, name:'Lily Hargrove', phone:'(540) 555-0190', lines:[['unicorn',1]], shelf:'A4', status:'kiln', painted:ago(2), kiln:ago(0)},
+      {id:6, name:'Priya Shah', phone:'(540) 555-0155', lines:[['plate',1]], shelf:'B2', status:'painted', painted:ago(0)},
+      {id:7, name:'Ruth Kim', phone:'(540) 555-0107', lines:[['ornament',4]], shelf:'C3', status:'painted', painted:ago(0)},
+      {id:8, name:'Marcus Lee', phone:'(540) 555-0161', lines:[['bowl',2]], shelf:'A1', status:'picked', painted:ago(12), picked:ago(3)},
+      {id:9, name:'Jen Alvarez', phone:'(540) 555-0134', lines:[['tile',4]], shelf:'B1', status:'picked', painted:ago(9), picked:ago(1)}
+    ],
+    nextId: 10
+  };
+}
+
+let S = seed();
+const ui = {tab:'home', filter:'ready', q:'', intro:true, sheet:null, draft:null};
+let shop = 'Your Studio';
+try { shop = localStorage.getItem('kb-shop') || shop; } catch(e){}
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const item = id => S.items.find(i => i.id === id);
+const money = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2});
+const days = t => Math.max(0, Math.floor((Date.now() - t) / DAY));
+const agoText = t => { const d = days(t); return d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; };
+const isUnclaimed = t => t.status === 'ready' && days(t.ready) >= 30;
+const isLow = i => i.qty <= i.low;
+const count = t => t.lines.reduce((a, [, q]) => a + q, 0);
+const total = t => t.lines.reduce((a, [id, q]) => a + item(id).price * q, 0);
+const pieceText = t => t.lines.map(([id, q]) => q > 1 ? `${q} ${item(id).pl}` : item(id).one).join(' and ');
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const first = t => t.name.split(' ')[0];
+const STATUS = {painted:'Waiting to fire', kiln:'In the kiln', ready:'Ready for pickup', picked:'Picked up'};
+const pill = s => `<span class="pill ${s}">${STATUS[s]}</span>`;
+
+/* ---------- screens ---------- */
+function home(){
+  const c = s => S.tickets.filter(t => t.status === s).length;
+  const un = S.tickets.filter(isUnclaimed);
+  const low = S.items.filter(isLow);
+  const todays = S.tickets.filter(t => days(t.painted) === 0);
+  const sales = todays.reduce((a, t) => a + total(t), 0);
+  const pcs = todays.reduce((a, t) => a + count(t), 0);
+  const stat = (f, n, label, sub, warn) => `<button class="stat" data-act="goto" data-tab="${f === 'low' ? 'inventory' : 'pickups'}" data-f="${f}">
+      ${f === 'low' ? `<span class="pill alert">Low stock</span>` : pill(f)}<span class="n">${n}</span><span class="s ${warn ? 'warn' : ''}">${sub}</span></button>`;
+  let attention = '';
+  if (un.length) attention += `<div class="row"><div class="r-main"><div class="r-title">${un.length} ${un.length > 1 ? 'pieces' : 'piece'} waiting 30+ days</div>
+      <div class="r-sub">${un.map(t => esc(t.name)).join(', ')}</div></div><button class="btn sm line" data-act="remind-all">Remind</button></div>`;
+  low.forEach(i => attention += `<div class="row"><div class="r-main"><div class="r-title">${esc(i.name)}</div><div class="r-sub">${i.qty} left, reorder at ${i.low}</div></div>
+      <button class="btn sm line" data-act="reorder">Reorder</button></div>`);
+  return `
+    ${ui.intro ? `<section class="card intro"><h2>This is a demo with sample data</h2>
+      <ol><li>Tap <b>+ New painter</b> and add a Dino figurine.</li><li>In Pickups, load the kiln, then unload it.</li><li>Watch the "ready for pickup" texts go out.</li></ol>
+      <button class="x" data-act="hide-intro">Got it</button></section>` : ''}
+    <h1>Today</h1>
+    <div class="stats">
+      ${stat('ready', c('ready'), 'Ready', un.length ? `${un.length} waiting 30+ days` : 'All recent', un.length)}
+      ${stat('kiln', c('kiln'), 'Kiln', 'Firing now')}
+      ${stat('painted', c('painted'), 'To fire', 'Painted, not fired yet')}
+      ${stat('low', low.length, 'Low', low.length ? low.map(i => i.name).join(', ') : 'All stocked', low.length)}
+    </div>
+    <div class="section-title"><h2>Needs attention</h2></div>
+    <div class="card list">${attention || '<div class="empty">All caught up.</div>'}</div>
+    <div class="section-title"><h2>Painted today</h2></div>
+    <div class="card list today"><div><b>${todays.length}</b><span>Painters</span></div><div><b>${pcs}</b><span>Pieces</span></div><div><b>${money(sales)}</b><span>Sales</span></div></div>`;
+}
+
+function ticketCard(t, showStatus){
+  const un = isUnclaimed(t);
+  let sub = '';
+  if (t.status === 'painted') sub = `Painted ${agoText(t.painted)}`;
+  if (t.status === 'kiln') sub = `Loaded ${agoText(t.kiln)}`;
+  if (t.status === 'ready') sub = `Ready ${agoText(t.ready)}`;
+  if (t.status === 'picked') sub = `Picked up ${agoText(t.picked)}`;
+  let act = '';
+  if (t.status === 'painted') act = `<button class="btn sm ghost" data-act="kiln-one" data-id="${t.id}">Load into kiln</button>`;
+  if (t.status === 'kiln') act = `<button class="btn sm" data-act="ready-one" data-id="${t.id}">Mark ready and text</button>`;
+  if (t.status === 'ready') act = (un ? `<button class="btn sm line" data-act="remind" data-id="${t.id}">Send reminder</button>` : '') +
+      `<button class="btn sm ghost" data-act="picked" data-id="${t.id}">Picked up</button>`;
+  return `<article class="ticket${un ? ' unclaimed' : ''}">
+    <div class="shelf"><span>Shelf</span>${t.shelf}</div>
+    <div><div class="t-name">${esc(t.name)}</div><div class="t-sub">${esc(cap(pieceText(t)))}${t.note ? ' · ' + esc(t.note) : ''}</div></div>
+    <div class="t-meta">${showStatus ? pill(t.status) : ''}${un ? `<span class="pill alert">Waiting ${days(t.ready)} days</span>` : `<span class="muted">${sub}</span>`}${t.reminded ? `<span class="muted">Reminder sent ${agoText(t.reminded)}</span>` : ''}</div>
+    ${act ? `<div class="t-act">${act}</div>` : ''}
+  </article>`;
+}
+
+function pickupList(){
+  const q = ui.q.trim().toLowerCase();
+  let list;
+  if (q) list = S.tickets.filter(t => t.name.toLowerCase().includes(q) || t.phone.replace(/\D/g,'').includes(q.replace(/\D/g,'') || '§') || t.shelf.toLowerCase() === q);
+  else list = S.tickets.filter(t => t.status === ui.filter);
+  const key = t => ({painted:t.painted, kiln:t.kiln, ready:t.ready, picked:-t.picked}[t.status]);
+  list.sort((a, b) => key(a) - key(b));
+  let bulk = '';
+  if (!q && ui.filter === 'painted' && list.length) bulk = `<div class="bulk"><span>${list.length} ${list.length > 1 ? 'tickets' : 'ticket'} ready to fire</span><button class="btn sm" data-act="kiln-all"><span>Load kiln</span></button></div>`;
+  if (!q && ui.filter === 'kiln' && list.length) bulk = `<div class="bulk go"><span>Kiln done? Text everyone at once.</span><button class="btn sm" data-act="ready-all"><span>Unload kiln</span></button></div>`;
+  const empties = {painted:'Nothing waiting to fire.', kiln:'The kiln is empty.', ready:'No pieces waiting for pickup.', picked:'No pickups yet.'};
+  return bulk + (list.length ? `<div class="tickets">${list.map(t => ticketCard(t, !!q)).join('')}</div>`
+    : `<div class="empty">${q ? `No one matches "${esc(ui.q)}".` : empties[ui.filter]}</div>`);
+}
+
+function pickups(){
+  const chips = ['painted','kiln','ready','picked'].map(s => {
+    const n = S.tickets.filter(t => t.status === s).length;
+    return `<button class="chip" data-act="filter" data-f="${s}" aria-pressed="${!ui.q && ui.filter === s}">${STATUS[s]}<span class="c">${n}</span></button>`;
+  }).join('');
+  return `<h1>Pickups</h1>
+    <input class="search" id="q" type="search" placeholder="Search by name, phone, or shelf" value="${esc(ui.q)}" autocomplete="off">
+    <div class="chips" id="chips">${chips}</div>
+    <div id="plist" style="display:flex;flex-direction:column;gap:12px">${pickupList()}</div>`;
+}
+
+function inventory(){
+  const low = S.items.filter(isLow);
+  const sorted = [...S.items].sort((a, b) => isLow(b) - isLow(a));
+  const qty = S.items.reduce((a, i) => a + i.qty, 0);
+  return `<h1>Bisque inventory</h1>
+    <div class="section-title"><p class="muted"><b class="num" style="color:var(--ink)">${qty}</b> unpainted pieces on the shelf · ${low.length} running low</p>
+      <button class="btn sm ghost" data-act="reorder">Reorder list</button></div>
+    <div class="card list">${sorted.map(i => `<div class="inv${isLow(i) ? ' low' : ''}">
+      <div class="r-main"><div class="r-title">${esc(i.name)}${isLow(i) ? '<span class="pill alert">Low</span>' : ''}</div>
+      <div class="r-sub">${i.sup} · costs ${money(i.cost)} · sells ${money(i.price)}</div></div>
+      <div class="stepper"><button data-act="inv-dec" data-id="${i.id}" aria-label="Remove one ${esc(i.name)}">−</button><span class="q">${i.qty}</span><button data-act="inv-inc" data-id="${i.id}" aria-label="Add one ${esc(i.name)}">+</button></div>
+    </div>`).join('')}</div>
+    <p class="muted" style="font-size:13px">Counts drop on their own when a painter checks in. Use + and − for deliveries or breakage.</p>`;
+}
+
+function more(){
+  const margins = [...S.items].map(i => ({n:i.name, m:i.price - i.cost, p:(i.price - i.cost) / i.price})).sort((a, b) => b.m - a.m);
+  const maxM = margins[0].m;
+  const split = [['Walk-ins', 58, 'var(--cobalt)'], ['Parties', 27, 'var(--kiln)'], ['Summer camp', 15, 'var(--ready)']];
+  return `<h1>Coming next</h1>
+    <section class="card preview">
+      <div class="ph"><h3>Inventory and pickups</h3><span class="phase-tag now">Phase 1 · this demo</span></div>
+      <ul class="checks"><li>Bisque counts update when someone checks in to paint</li><li>Low-stock alerts on your phone, plus a reorder list by supplier</li>
+      <li>Every piece tracked from painted to kiln to ready to picked up</li><li>Ready-for-pickup texts, and reminders for forgotten pieces</li><li>Find anyone's piece by name, phone, or shelf</li></ul>
+    </section>
+    <section class="card preview">
+      <div class="ph"><h3>Party room</h3><span class="phase-tag">Phase 2</span></div>
+      <p class="muted" style="font-size:14px">Bookings, deposits, and a prep list so the right pieces are pulled before the kids show up.</p>
+      <div class="booking"><div class="when">Sat<small>2:00 pm</small></div><div><b>Carter birthday</b><div class="muted">12 kids · 12 mini plates</div></div><span class="pill ready">Deposit paid</span></div>
+      <div class="booking"><div class="when">Sun<small>11:00 am</small></div><div><b>Scout troop</b><div class="muted">9 kids · 9 dinos</div></div><span class="pill kiln">Deposit due</span></div>
+      <p class="sample">Sample bookings</p>
+    </section>
+    <section class="card preview">
+      <div class="ph"><h3>Summer camp</h3><span class="phase-tag">Phase 2</span></div>
+      <p class="muted" style="font-size:14px">Sign-ups, roster, parent contacts, and each camper's pieces tracked so pickup day isn't chaos.</p>
+      <div><div class="section-title" style="font-size:13px"><b>Week 2 · 14 of 16 spots</b><span class="muted">2 left</span></div>
+      <div class="meter" style="margin-top:6px"><i style="width:87.5%;background:var(--ready)"></i></div></div>
+      <p class="sample">Sample camp week</p>
+    </section>
+    <section class="card preview">
+      <div class="ph"><h3>Money</h3><span class="phase-tag">Phase 3</span></div>
+      <p class="muted" style="font-size:14px">Where the money comes from, and which pieces earn the most per sale.</p>
+      <div class="meter">${split.map(([, p, c]) => `<i style="width:${p}%;background:${c}"></i>`).join('')}</div>
+      <div class="legend">${split.map(([n, p, c]) => `<span style="--c:${c}">${n} ${p}%</span>`).join('')}</div>
+      <div class="eyebrow" style="margin-top:4px">Profit per piece</div>
+      <div class="margins">${margins.slice(0, 5).map(r => `<div><span>${esc(r.n)}</span><span class="bar" style="width:${Math.round(r.m / maxM * 100)}%"></span><span class="v">${money(Math.round(r.m))}</span></div>`).join('')}</div>
+      <p class="sample">Sample numbers. Phase 3 would use the studio's real sales.</p>
+    </section>
+    <section class="card preview">
+      <h3>Demo settings</h3>
+      <div class="field"><label for="shopname">Studio name</label><input id="shopname" value="${esc(shop)}" maxlength="40"></div>
+      <button class="btn line" data-act="reset">Reset demo data</button>
+    </section>`;
+}
+
+/* ---------- sheets ---------- */
+function freeShelf(){
+  const used = new Set(S.tickets.filter(t => t.status !== 'picked').map(t => t.shelf));
+  return SHELVES.find(s => !used.has(s)) || 'E1';
+}
+
+function pickerHTML(){
+  const d = ui.draft;
+  return S.items.map(i => {
+    const q = d.lines[i.id] || 0;
+    return `<div class="pick-wrap"><button class="pick${q ? ' on' : ''}" data-act="pick-item" data-id="${i.id}" ${i.qty - q <= 0 ? 'disabled' : ''}>
+      <span class="p-name">${esc(i.name)}</span><span class="p-meta">${money(i.price)} · ${i.qty - q} left</span></button>
+      ${q ? `<span class="p-q">×${q}</span><button class="p-minus" data-act="line-dec" data-id="${i.id}" aria-label="Remove one ${esc(i.name)}">−</button>` : ''}</div>`;
+  }).join('');
+}
+const draftTotal = () => Object.entries(ui.draft.lines).reduce((a, [id, q]) => a + item(id).price * q, 0);
+
+function msg(t, remind){
+  const are = count(t) > 1 ? 'are' : 'is';
+  return remind
+    ? `Hi ${first(t)}, friendly reminder from ${shop}: your ${pieceText(t)} ${are} still waiting for you on shelf ${t.shelf}. Stop by anytime we're open!`
+    : `Hi ${first(t)}! Your ${pieceText(t)} ${are} out of the kiln and ready to pick up at ${shop}. Look for shelf ${t.shelf}. See you soon!`;
+}
+
+function sheetHTML(){
+  const s = ui.sheet;
+  const head = (title) => `<div class="grab"></div><div class="panel-head"><h2>${title}</h2><button class="close" data-act="close-sheet" aria-label="Close">×</button></div>`;
+  if (s.type === 'new') {
+    const d = ui.draft;
+    return `${head('New painter')}
+      <div class="field"><label for="np-name">Name</label><input id="np-name" placeholder="Sarah Jones" value="${esc(d.name)}" autocomplete="off"></div>
+      <div class="field"><label for="np-phone">Mobile number</label><input id="np-phone" inputmode="tel" placeholder="(540) 555-0100" value="${esc(d.phone)}" autocomplete="off"></div>
+      <div class="field"><label>What are they painting?</label><div class="picker" id="picker">${pickerHTML()}</div></div>
+      <p class="err" id="np-err" hidden></p>
+      <div class="foot"><div><div class="muted" style="font-size:12px">Total</div><div class="tot" id="np-total">${money(draftTotal())}</div></div>
+        <button class="btn" data-act="save-painter">Save and assign shelf</button></div>`;
+  }
+  if (s.type === 'text') {
+    const ts = s.ids.map(id => S.tickets.find(t => t.id === id));
+    const remind = s.mode === 'remind';
+    return `${head(remind ? (ts.length > 1 ? `Send ${ts.length} reminders` : 'Send a reminder') : (ts.length > 1 ? `Unload kiln (${ts.length})` : 'Mark ready'))}
+      <p class="muted" style="font-size:14px">${remind ? 'A friendly nudge for pieces still sitting on the shelf.' : 'Each customer gets a text the moment their piece comes out of the kiln.'}</p>
+      <div class="texts">${ts.map(t => `<div><div class="sms-to">To ${esc(t.name)} · ${esc(t.phone)}</div><div class="sms">${esc(msg(t, remind))}</div></div>`).join('')}</div>
+      <button class="btn big" data-act="send-texts">${ts.length > 1 ? `Send ${ts.length} texts` : 'Send text'}</button>
+      <p class="fine">Demo only. No real texts go out.</p>`;
+  }
+  if (s.type === 'reorder') {
+    const low = S.items.filter(isLow);
+    if (!low.length) return `${head('Reorder list')}<div class="empty">Nothing is running low.</div>`;
+    const sugg = i => Math.ceil(Math.max(i.low * 3 - i.qty, i.low) / 6) * 6;
+    const bySup = {};
+    low.forEach(i => (bySup[i.sup] = bySup[i.sup] || []).push(i));
+    const cost = low.reduce((a, i) => a + sugg(i) * i.cost, 0);
+    return `${head('Reorder list')}
+      <p class="muted" style="font-size:14px">Everything at or below its reorder point, grouped by supplier. Amounts round up to full cases of 6.</p>
+      ${Object.entries(bySup).map(([sup, list]) => `<div class="supplier"><h3>${sup}</h3>${list.map(i => `<div class="line"><span>${esc(i.name)} <span class="muted">(${i.qty} left)</span></span><b class="num">Order ${sugg(i)}</b></div>`).join('')}</div>`).join('')}
+      <div class="section-title"><span class="muted">Estimated cost</span><b class="num" style="font-size:18px">${money(Math.round(cost * 100) / 100)}</b></div>
+      <button class="btn big" data-act="receive">Mark order as received</button>`;
+  }
+  return '';
+}
+
+function openSheet(sheet){ ui.sheet = sheet; renderSheet(); }
+function closeSheet(){ ui.sheet = null; ui.draft = null; renderSheet(); }
+function renderSheet(){
+  $('#sheet').innerHTML = ui.sheet ? `<div class="sheet" data-backdrop><div class="panel" role="dialog" aria-modal="true">${sheetHTML()}</div></div>` : '';
+  if (ui.sheet && ui.sheet.type === 'new') {
+    $('#np-name').addEventListener('input', e => ui.draft.name = e.target.value);
+    $('#np-phone').addEventListener('input', e => ui.draft.phone = e.target.value);
+  }
+}
+
+/* ---------- feedback ---------- */
+let toastTimer, notifTimer;
+function toast(text){
+  clearTimeout(toastTimer);
+  $('#toast').innerHTML = `<div class="toast" role="status">${esc(text)}</div>`;
+  toastTimer = setTimeout(() => $('#toast').innerHTML = '', 2600);
+}
+function notify(title, body){
+  clearTimeout(notifTimer);
+  $('#notif').innerHTML = `<button class="notif" data-act="notif-open"><span class="logo">K</span><span style="flex:1;min-width:0"><span class="n-top"><span>Kilnbook</span><span>now</span></span><b>${esc(title)}</b><p>${esc(body)}</p></span></button>`;
+  notifTimer = setTimeout(() => $('#notif').innerHTML = '', 4500);
+}
+function useStock(id, n){
+  const i = item(id); const was = isLow(i);
+  i.qty = Math.max(0, i.qty - n);
+  return !was && isLow(i) ? i : null;
+}
+
+/* ---------- render ---------- */
+function render(){
+  $('#ab-shop').textContent = shop;
+  $('#ab-date').textContent = new Date().toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+  const screens = {home, pickups, inventory, more};
+  $('#screen').innerHTML = screens[ui.tab]();
+  document.querySelectorAll('.tab').forEach(b => b.toggleAttribute('aria-current', false) || (b.dataset.tab === ui.tab && b.setAttribute('aria-current', 'page')));
+  const un = S.tickets.filter(isUnclaimed).length, low = S.items.filter(isLow).length;
+  const bp = $('#b-pick'), bi = $('#b-inv');
+  bp.hidden = !un; bp.textContent = un; bi.hidden = !low; bi.textContent = low;
+  if (ui.tab === 'pickups') $('#q').addEventListener('input', e => { ui.q = e.target.value; $('#plist').innerHTML = pickupList();
+    document.querySelectorAll('#chips .chip').forEach(c => c.setAttribute('aria-pressed', !ui.q && c.dataset.f === ui.filter)); });
+  if (ui.tab === 'more') $('#shopname').addEventListener('input', e => { shop = e.target.value.trim() || 'Your Studio'; $('#ab-shop').textContent = shop;
+    try { localStorage.setItem('kb-shop', shop); } catch(err){} });
+}
+function go(tab, f){ ui.tab = tab; if (f) { ui.filter = f; ui.q = ''; } render(); $('#screen').scrollTop = 0; }
+
+/* ---------- actions ---------- */
+$('#app').addEventListener('click', e => {
+  if (e.target.hasAttribute && e.target.hasAttribute('data-backdrop')) return closeSheet();
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, id = el.dataset.id, t = S.tickets.find(x => x.id === Number(id));
+  switch (a) {
+    case 'tab': go(el.dataset.tab); break;
+    case 'goto': go(el.dataset.tab, el.dataset.f === 'low' ? null : el.dataset.f); break;
+    case 'hide-intro': ui.intro = false; render(); break;
+    case 'filter': ui.filter = el.dataset.f; ui.q = ''; render(); break;
+    case 'new': ui.draft = {name:'', phone:'', lines:{}}; openSheet({type:'new'}); setTimeout(() => $('#np-name') && $('#np-name').focus(), 50); break;
+    case 'pick-item': ui.draft.lines[id] = (ui.draft.lines[id] || 0) + 1; $('#picker').innerHTML = pickerHTML(); $('#np-total').textContent = money(draftTotal()); break;
+    case 'line-dec': ui.draft.lines[id]--; if (!ui.draft.lines[id]) delete ui.draft.lines[id]; $('#picker').innerHTML = pickerHTML(); $('#np-total').textContent = money(draftTotal()); break;
+    case 'save-painter': {
+      const d = ui.draft, err = $('#np-err');
+      const lines = Object.entries(d.lines);
+      if (!d.name.trim()) { err.textContent = 'Add the painter\'s name so you can find their piece later.'; err.hidden = false; return; }
+      if (!lines.length) { err.textContent = 'Pick at least one piece they\'re painting.'; err.hidden = false; return; }
+      const shelf = freeShelf();
+      const nt = {id:S.nextId++, name:d.name.trim(), phone:d.phone.trim() || '(no number)', lines, shelf, status:'painted', painted:Date.now()};
+      S.tickets.push(nt);
+      const newlyLow = lines.map(([iid, q]) => useStock(iid, q)).filter(Boolean);
+      closeSheet(); go('pickups', 'painted');
+      toast(`${first(nt)} is on shelf ${shelf}`);
+      if (newlyLow.length) setTimeout(() => notify(`Low stock: ${newlyLow.map(i => i.name).join(', ')}`,
+        newlyLow.map(i => `${i.qty} left. Reorder from ${i.sup}.`).join(' ')), 700);
+      break;
+    }
+    case 'kiln-one': t.status = 'kiln'; t.kiln = Date.now(); render(); toast(`${first(t)}'s ${pieceText(t)} went in the kiln`); break;
+    case 'kiln-all': {
+      const ts = S.tickets.filter(x => x.status === 'painted');
+      ts.forEach(x => { x.status = 'kiln'; x.kiln = Date.now(); });
+      ui.filter = 'kiln'; render(); toast(`${ts.length} ${ts.length > 1 ? 'tickets' : 'ticket'} loaded into the kiln`); break;
+    }
+    case 'ready-one': openSheet({type:'text', mode:'ready', ids:[t.id]}); break;
+    case 'ready-all': openSheet({type:'text', mode:'ready', ids:S.tickets.filter(x => x.status === 'kiln').map(x => x.id)}); break;
+    case 'remind': openSheet({type:'text', mode:'remind', ids:[t.id]}); break;
+    case 'remind-all': openSheet({type:'text', mode:'remind', ids:S.tickets.filter(isUnclaimed).map(x => x.id)}); break;
+    case 'send-texts': {
+      const s = ui.sheet, ts = s.ids.map(i => S.tickets.find(x => x.id === i));
+      if (s.mode === 'ready') ts.forEach(x => { x.status = 'ready'; x.ready = Date.now(); });
+      else ts.forEach(x => x.reminded = Date.now());
+      closeSheet();
+      if (s.mode === 'ready') go('pickups', 'ready'); else render();
+      toast(ts.length > 1 ? `${ts.length} texts sent` : `Text sent to ${first(ts[0])}`);
+      break;
+    }
+    case 'picked': t.status = 'picked'; t.picked = Date.now(); render(); toast(`${first(t)} picked up from shelf ${t.shelf}. Shelf is free.`); break;
+    case 'inv-inc': item(id).qty++; render(); break;
+    case 'inv-dec': { const i = item(id); if (i.qty > 0) { const nl = useStock(id, 1); render(); if (nl) notify(`Low stock: ${nl.name}`, `${nl.qty} left. Reorder from ${nl.sup}.`); } break; }
+    case 'reorder': openSheet({type:'reorder'}); break;
+    case 'receive': {
+      const low = S.items.filter(isLow);
+      low.forEach(i => i.qty += Math.ceil(Math.max(i.low * 3 - i.qty, i.low) / 6) * 6);
+      closeSheet(); render(); toast(`Restocked ${low.length} ${low.length > 1 ? 'items' : 'item'}`); break;
+    }
+    case 'notif-open': $('#notif').innerHTML = ''; go('inventory'); break;
+    case 'close-sheet': closeSheet(); break;
+    case 'reset': S = seed(); ui.intro = true; ui.filter = 'ready'; ui.q = ''; go('home'); toast('Demo data reset'); break;
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.sheet) closeSheet(); });
+
+render();
+</script>
+</body>
+</html>
