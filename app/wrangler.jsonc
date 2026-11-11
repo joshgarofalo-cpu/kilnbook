@@ -1,0 +1,10 @@
+// Cloudflare settings. Tells Cloudflare to serve the built app (the dist folder)
+// as a plain website from the Worker named "kilnbook". No server code is involved.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "kilnbook",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
